@@ -62,7 +62,7 @@ router.post('/', authMiddleware, async (req, res) => {
         }
 
         const appointment = await Appointment.create({
-            user: req.userId, // 🔥 from JWT
+            user: req.userId,
             title,
             description,
             date,
@@ -159,5 +159,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 export default router;
