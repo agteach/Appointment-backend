@@ -2,8 +2,10 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Appointment from '../models/Appointment.js';
 import authMiddleware from '../middleware/auth.js';
+import requireDatabase from '../middleware/requireDatabase.js';
 
 const router = express.Router();
+router.use(requireDatabase);
 
 const sanitizeAppointmentPayload = (payload = {}) => {
     const sanitized = {};

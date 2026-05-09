@@ -9,14 +9,38 @@ import authMiddleware from "./middleware/auth.js"
 
 
 dotenv.config({ quiet: true })
+mongoose.set("bufferCommands", false)
 
 const app = express()
 
+const normalizeOrigin = (value = "") => value.trim().replace(/\/+$/, "")
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map(normalizeOrigin)
+    .filter(Boolean)
+
+const isOriginAllowed = (origin) => {
+    if (!origin) {
+        return true
+    }
+
+    if (allowedOrigins.length === 0) {
+        return true
+    }
+
+    return allowedOrigins.includes(normalizeOrigin(origin))
+}
 
 app.use(
     cors({
-        origin: "https://appointment-management-beta.vercel.app",
-        credentials: true,
+        origin: (origin, callback) => {
+            if (isOriginAllowed(origin)) {
+                return callback(null, true)
+            }
+
+            return callback(new Error(`Origin ${origin} is not allowed by CORS`))
+        },
     }),
 );
 app.use(express.json())
@@ -42,22 +66,34 @@ const PORT = process.env.PORT || 5000
 
 const startServer = (message = '') => {
     app.listen(PORT, () => {
-
+        console.log(`server running on port ${PORT}${message}`)
     })
 }
 
-if (!process.env.MONGO_URL) {
+const connectToDatabase = async () => {
+    if (!process.env.MONGO_URL) {
+        console.log("MONGO_URL is not configured")
+        return
+    }
 
-    startServer(' (DB not connected)')
-} else {
-    mongoose.connect(process.env.MONGO_URL, {
-        serverSelectionTimeoutMS: 5000,
-    })
-        .then(() => {
-            startServer()
+    try {
+        await mongoose.connect(process.env.MONGO_URL, {
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 5000,
         })
-        .catch((err) => {
-
-            startServer(' (DB not connected)')
-        })
+        console.log("database connected")
+    } catch (err) {
+        console.error("database connection failed:", err.message)
+    }
 }
+
+mongoose.connection.on('disconnected', () => {
+    console.warn('database disconnected')
+})
+
+mongoose.connection.on('error', (error) => {
+    console.error('database error:', error.message)
+})
+
+startServer(mongoose.connection.readyState === 1 ? '' : ' (DB connecting)')
+void connectToDatabase()

@@ -3,6 +3,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import requireDatabase from '../middleware/requireDatabase.js';
 
 
 const router = express.Router();
@@ -20,6 +21,8 @@ const createToken = (userId) => {
 };
 
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
+
+router.use(requireDatabase);
 
 
 router.post('/signup', async (req, res) => {
